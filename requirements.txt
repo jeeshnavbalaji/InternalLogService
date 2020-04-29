@@ -1,0 +1,7 @@
+django
+djangorestframework
+djangorestframework-jwt
+django-cors-headers
+six
+cryptography
+django-sslserver

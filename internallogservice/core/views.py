@@ -29,6 +29,7 @@ from traceback import format_exc
 
 logger = logging.getLogger('schedule')
 
+
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
@@ -59,6 +60,7 @@ def delete_email_alert(request):
     print(data_json)
     return Response(data_json, status=HTTP_200_OK)
 
+
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
@@ -66,60 +68,71 @@ def email_alert(request):
     print(request.data)
     print("host->", request.get_host())
     print("is_secure->", request.is_secure())
-    email = request.data['email'][0]
-    send_log = request.data['sendLog']
-    day_of_week = request.data['dayOfWeek']
-    send_time = request.data['time']
-    file_format = request.data['fileFormat']
-    include_all = request.data['includeAll']
-    log_type = request.data['logType']
-    created_date = datetime.now()
-    sent_date = datetime.now()
-    domain_domain = None
-    domain_proto = None
-    domain_source = None
-    domain_destination = None
-    domain_action = None
-    domain_reason = None
-    domain_device = None
-    packet_country = None
-    packet_as_name = None
-    packet_proto = None
-    packet_source = None
-    packet_destination = None
-    packet_direction = None
-    packet_action = None
-    packet_category = None
-    packet_reason = None
-    packet_lists = None
-    packet_group = None
-    packet_host_name = None
-    if log_type == 'packet' and not include_all:
-        packet_country = request.data['packet']['country']
-        packet_as_name = request.data['packet']['asName']
-        packet_proto = request.data['packet']['proto']
-        packet_source = request.data['packet']['source']
-        packet_destination = request.data['packet']['destination']
-        packet_direction = request.data['packet']['direction']
-        packet_action = request.data['packet']['action']
-        packet_category = request.data['packet']['category']
-        packet_reason = request.data['packet']['reason']
-        packet_lists = request.data['packet']['list']
-        packet_group = request.data['packet']['group']
-        packet_host_name = request.data['packet']['hostName']
-    email_alert_object = EmailAlerts(email=email, send_log=send_log, day_of_week=day_of_week, time=send_time,
-                                     file_format=file_format, include_all=include_all, log_type=log_type,
-                                     created_date=created_date, sent_date=sent_date, packet_country=packet_country,
-                                     packet_asName=packet_as_name, packet_proto=packet_proto,
-                                     packet_source=packet_source, packet_destination=packet_destination,
-                                     packet_direction=packet_direction, packet_action=packet_action,
-                                     packet_category=packet_category, packet_reason=packet_reason,
-                                     packet_list=packet_lists, packet_group=packet_group,
-                                     packet_device=packet_host_name, domain_domain=domain_domain,
-                                     domain_proto=domain_proto, domain_source=domain_source,
-                                     domain_destination=domain_destination, domain_action=domain_action,
-                                     domain_reason=domain_reason, domain_device=domain_device)
-    email_alert_object.save()
+    for mail in request.data['email']:
+        email = mail
+        send_log = request.data['sendLog']
+        day_of_week = request.data['dayOfWeek']
+        send_time = request.data['time']
+        file_format = request.data['fileFormat']
+        include_all = request.data['includeAll']
+        log_type = request.data['logType']
+        created_date = datetime.now()
+        sent_date = datetime.now()
+        domain_domain = None
+        domain_proto = None
+        domain_source = None
+        domain_destination = None
+        domain_action = None
+        domain_reason = None
+        domain_device = None
+        packet_country = None
+        packet_as_name = None
+        packet_proto = None
+        packet_source = None
+        packet_destination = None
+        packet_direction = None
+        packet_action = None
+        packet_category = None
+        packet_reason = None
+        packet_lists = None
+        packet_group = None
+        packet_host_name = None
+        if log_type == 'packet' and not include_all:
+            packet_country = request.data['packet']['country']
+            packet_as_name = request.data['packet']['asName']
+            packet_proto = request.data['packet']['proto']
+            packet_source = request.data['packet']['source']
+            packet_destination = request.data['packet']['destination']
+            packet_direction = request.data['packet']['direction']
+            packet_action = request.data['packet']['action']
+            packet_category = request.data['packet']['category']
+            packet_reason = request.data['packet']['reason']
+            packet_lists = request.data['packet']['list']
+            packet_group = request.data['packet']['group']
+            packet_host_name = request.data['packet']['hostName']
+
+        if log_type == 'domain' and not include_all:
+            domain_domain = request.data['domain']['domain']
+            domain_proto = request.data['domain']['proto']
+            domain_source = request.data['domain']['source']
+            domain_destination = request.data['domain']['destination']
+            domain_action = request.data['domain']['action']
+            domain_reason = request.data['domain']['reason']
+            domain_device = request.data['domain']['hostName']
+
+        email_alert_object = EmailAlerts(email=str(email), send_log=send_log, day_of_week=day_of_week, time=send_time,
+                                         file_format=file_format, include_all=include_all, log_type=log_type,
+                                         created_date=created_date, sent_date=sent_date, packet_country=packet_country,
+                                         packet_asName=packet_as_name, packet_proto=packet_proto,
+                                         packet_source=packet_source, packet_destination=packet_destination,
+                                         packet_direction=packet_direction, packet_action=packet_action,
+                                         packet_category=packet_category, packet_reason=packet_reason,
+                                         packet_list=packet_lists, packet_group=packet_group,
+                                         packet_device=packet_host_name, domain_domain=domain_domain,
+                                         domain_proto=domain_proto, domain_source=domain_source,
+                                         domain_destination=domain_destination, domain_action=domain_action,
+                                         domain_reason=domain_reason, domain_device=domain_device)
+        email_alert_object.save()
 
     # scheduler setup
     # scheduler = EmailScheduler()
@@ -221,10 +234,10 @@ def email(fromaddr, to, obj, host, is_secure):
     es_data = {}
     host_arr = host.split(":")
     if is_secure:
-        url = "https://"+host_arr[0]+":9200/"
+        url = "https://" + host_arr[0] + ":9200/"
     else:
-        url = "http://"+host_arr[0]+":9200/"
-    es_url = url+"logstash-"+obj['fields']['log_type']+"/_search"
+        url = "http://" + host_arr[0] + ":9200/"
+    es_url = url + "logstash-" + obj['fields']['log_type'] + "/_search"
     if not obj['fields']['include_all']:
         get_request_query(obj)
         es_data = requests.post()
@@ -312,7 +325,7 @@ def get_request_query(obj):
         if not query_string:
             query_string = v
         else:
-            query_string += "AND "+v
+            query_string += "AND " + v
 
     start_date = ""
     if not obj['fields']['sent_date']:
@@ -380,22 +393,22 @@ def create_file(data_obj):
             if 'blacklists' in data['_index']:
                 blacklists = data['_source']['blacklists']
             packet_obj = {
-                    "timestamp": data['_source']['timestamp'],
-                    "country": data['_source']['Country'],
-                    "as_name": data['_source']['asName'],
-                    "protocol": data['_source']['Proto'],
-                    "source_ip": data['_source']['source'],
-                    "destination_ip": data['_source']['destination'],
-                    "direction": data['_source']['Direction'],
-                    "action": data['_source']['Action'],
-                    "denied_category": denied_category,
-                    "matched_category": matched_category,
-                    "reason": data['_source']['reason'],
-                    "threatlists": threatlists,
-                    "whitelists": whitelists,
-                    "blacklists": blacklists,
-                    "group": data['_source']['Group'],
-                    "device": data['_source']['HName']
+                "timestamp": data['_source']['timestamp'],
+                "country": data['_source']['Country'],
+                "as_name": data['_source']['asName'],
+                "protocol": data['_source']['Proto'],
+                "source_ip": data['_source']['source'],
+                "destination_ip": data['_source']['destination'],
+                "direction": data['_source']['Direction'],
+                "action": data['_source']['Action'],
+                "denied_category": denied_category,
+                "matched_category": matched_category,
+                "reason": data['_source']['reason'],
+                "threatlists": threatlists,
+                "whitelists": whitelists,
+                "blacklists": blacklists,
+                "group": data['_source']['Group'],
+                "device": data['_source']['HName']
             }
             packet_logs.append(packet_obj)
 
@@ -457,9 +470,6 @@ def check_pending():
     #     schedule.run_pending()
     # except Exception:
     #     logger.error(format_exc())
-
-
-
 
 
 @csrf_exempt

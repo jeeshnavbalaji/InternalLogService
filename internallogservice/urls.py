@@ -18,12 +18,14 @@ from django.urls import path
 
 from django.contrib import admin
 from django.urls import path
-from .core.views import login, sample_api, email_alert
+from .core.views import login, sample_api, email_alert, edit_email_alert, delete_email_alert
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login', login),
     path('api/sampleapi', sample_api),
-    path('api/emailalert', email_alert)
+    path('api/emailalert', email_alert),
+    path('api/editemailalert', edit_email_alert),
+    path('api/deleteemailalert', delete_email_alert)
 ]

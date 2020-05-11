@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'schedule',
+    'requests',
+    'crontab',
 
     #Local Apps
     'internallogservice.core',

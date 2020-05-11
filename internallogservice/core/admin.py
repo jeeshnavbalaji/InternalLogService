@@ -6,5 +6,3 @@ from internallogservice.core.models import *
 
 
 admin.site.register(EmailAlerts)
-admin.site.register(DomainFields)
-admin.site.register(PacketFields)

@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from django.utils.datetime_safe import datetime, date
+from django.utils.datetime_safe import datetime
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -26,8 +26,12 @@ import threading
 from crontab import CronTab
 import logging
 from traceback import format_exc
+from datetime import timedelta
+from timeloop import Timeloop
 
 logger = logging.getLogger('schedule')
+
+tl = Timeloop()
 
 
 @csrf_exempt
@@ -154,19 +158,25 @@ def email_alert(request):
         if day_of_week == "saturday":
             schedule.every().saturday.at(send_time).do(send_email, request.get_host(), request.is_secure())
 
-    email_cron = CronTab(tab="""* * * * * python views.py""")
-    job = email_cron.new(command='* * * * * python email_schedule.py')
-    job.minute.every(1)
-    job.every_reboot()
-    for job in email_cron:
-        print("cron jobs->", job)
-    email_cron.write()
+    # email_cron = CronTab(tab="""* * * * * python email_schedule.py""")
+    # job = email_cron.new(command='* * * * * python email_schedule.py')
+    # job.minute.every(1)
+    # job.every_reboot()
+    # for job in email_cron:
+    #     print("cron jobs->", job)
+    # email_cron.write()
     # check_pending()
     # schedule_thread = threading.Thread(target=check_pending(), args=(10,))
     # schedule_thread.start()
     # while True:
     #     schedule.run_pending()
     #     time.sleep(1)
+    # if __name__ == "__main__":
+    try:
+        print("timeloop jobs", list(tl.jobs))
+        tl.start()
+    except Exception:
+        logger.error(format_exc())
     return Response(status=HTTP_200_OK)
 
 
@@ -180,10 +190,50 @@ def edit_email_alert(request):
     return Response(data_json, status=HTTP_200_OK)
 
 
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def get_from_gmc(request):
+    gmc_url = "https://gmc.banduracyber.com/api/v1/"
+    if 'policy' in request.data:
+        request_url = gmc_url+request.data['policy']
+    if 'country' in request.data:
+        request_url = gmc_url+request.data['country']
+    headers = {
+        "accept": "application/json",
+        "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
+    }
+    data = requests.get(request_url, headers=headers)
+    print("Data from gmc->", data.json())
+    return Response(data.json(), status=HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def add_country_to_allowed_or_denied(request):
+    gmc_url = "https://gmc.banduracyber.com/api/v1/policy/"+request.data['policy_uuid']+"/countries/"
+    if 'allowed' in request.data['type']:
+        request_url = gmc_url+request.data['type']
+    if 'denied' in request.data['type']:
+        request_url = gmc_url+request.data['type']
+
+    params = {
+        'codes': request.data['country_code']
+    }
+    headers = {
+        "accept": "application/json",
+        "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
+    }
+    data = requests.patch(request_url, params=params, headers=headers)
+    print("Data from gmc after allowed or denied->", data.json())
+    return Response(data.json(), status=HTTP_200_OK)
+
+
 def send_email(host, is_secure):
     print("inside send_email() method")
     email_alert_object = json.loads(serializers.serialize('json', EmailAlerts.objects.all()))
-    fromaddr = "jbachu@loginsoft.com"
+    fromaddr = "banduratest@outlook.com"
     toaddr = ""
     days_difference = None
     str_time = "{0:0>2}".format(str(datetime.now().hour)) + ":" + "{0:0>2}".format(str(datetime.now().minute)) + ":00"
@@ -288,13 +338,13 @@ def email(fromaddr, to, obj, host, is_secure):
     msg.attach(p)
 
     # creates SMTP session
-    s = smtplib.SMTP('smtp.office365.com', 587)
-
+    # s = smtplib.SMTP('smtp.office365.com', 587)
+    s = smtplib.SMTP('smtp-mail.outlook.com', 587)
     # start TLS for security
     s.starttls()
 
     # Authentication
-    s.login(fromaddr, "@07711a0514P")
+    s.login(fromaddr, "$0ftw@re")
 
     # Converts the Multipart msg into a string
     text = msg.as_string()
@@ -462,14 +512,13 @@ def create_file(data_obj):
         print("After csv file creation")
 
 
+@tl.job(interval=timedelta(seconds=1))
 def check_pending():
-    while 1:
+    logger.info("Checking schedule pending jobs")
+    try:
         schedule.run_pending()
-        time.sleep(1)
-    # try:
-    #     schedule.run_pending()
-    # except Exception:
-    #     logger.error(format_exc())
+    except Exception:
+        logger.error(format_exc())
 
 
 @csrf_exempt

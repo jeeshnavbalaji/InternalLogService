@@ -18,7 +18,8 @@ from django.urls import path
 
 from django.contrib import admin
 from django.urls import path
-from .core.views import login, sample_api, email_alert, edit_email_alert, delete_email_alert
+from .core.views import login, sample_api, email_alert, edit_email_alert, delete_email_alert, get_from_gmc, \
+    add_country_to_allowed_or_denied
 
 
 urlpatterns = [
@@ -27,5 +28,7 @@ urlpatterns = [
     path('api/sampleapi', sample_api),
     path('api/emailalert', email_alert),
     path('api/editemailalert', edit_email_alert),
-    path('api/deleteemailalert', delete_email_alert)
+    path('api/deleteemailalert', delete_email_alert),
+    path('api/getfromgmc', get_from_gmc),
+    path('api/countryallowordeny', add_country_to_allowed_or_denied)
 ]

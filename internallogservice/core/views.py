@@ -199,6 +199,11 @@ def get_from_gmc(request):
         request_url = gmc_url+request.data['policy']
     if 'country' in request.data:
         request_url = gmc_url+request.data['country']
+    if 'whitelist' in request.data:
+        request_url = gmc_url+request.data['whitelist']+'/ipv4'
+    if 'blacklist' in request.data:
+        request_url = gmc_url+request.data['blacklist']+'/ipv4'
+
     headers = {
         "accept": "application/json",
         "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
@@ -227,6 +232,29 @@ def add_country_to_allowed_or_denied(request):
     }
     data = requests.patch(request_url, params=params, headers=headers)
     print("Data from gmc after allowed or denied->", data.json())
+    return Response(data.json(), status=HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def add_or_delete_to_whitelist_and_blacklist(request):
+    gmc_url = "https://gmc.banduracyber.com/api/v1/"
+    request_url = gmc_url+request.data['list_type']+"/ipv4/"+request.data['group_uuid']+"/addrs"
+    params = {
+        'ip_addr': request.data['ip_address'],
+        'mask_bits': 32
+    }
+    headers = {
+        "accept": "application/json",
+        "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
+    }
+    if request.data['action_type'] == 'deleted':
+        set_address_url = request_url+'/'+request.data['ip_address']+'/32'
+        data = requests.delete(set_address_url, headers=headers)
+    else:
+        data = requests.post(request_url, params=params, headers=headers)
+    print("Data from gmc after update in list->", data.json())
     return Response(data.json(), status=HTTP_200_OK)
 
 

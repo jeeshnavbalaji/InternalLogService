@@ -28,10 +28,29 @@ import logging
 from traceback import format_exc
 from datetime import timedelta
 from timeloop import Timeloop
+from config import config_settings as settings
 
 logger = logging.getLogger('schedule')
 
 tl = Timeloop()
+try:
+    gmc_url = settings.URL
+    key = settings.GMC_KEY
+    print("Gmc host-> ", settings.URL, "auth_key-> ", key)
+    from_email = settings.FROM_EMAIL
+    password = settings.PASSWORD
+    smtp_servers = settings.SMTP_SERVERS
+    email_host = settings.MAIL_HOST
+    if email_host.lower() in smtp_servers.keys():
+        smtp_server = smtp_servers[email_host]
+        print("smtp server->", smtp_server)
+    if email_host.lower() == 'att' or email_host.lower() == 'verizon':
+        port = settings.port[1]
+    else:
+        port = settings.port[0]
+    print("port->", port)
+except Exception:
+    logger.error(format_exc())
 
 
 @csrf_exempt
@@ -194,7 +213,6 @@ def edit_email_alert(request):
 @api_view(["POST"])
 @permission_classes((AllowAny,))
 def get_from_gmc(request):
-    gmc_url = "https://gmc.banduracyber.com/api/v1/"
     if 'policy' in request.data:
         request_url = gmc_url+request.data['policy']
     if 'country' in request.data:
@@ -206,7 +224,7 @@ def get_from_gmc(request):
 
     headers = {
         "accept": "application/json",
-        "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
+        "x-api-key": key
     }
     data = requests.get(request_url, headers=headers)
     print("Data from gmc->", data.json())
@@ -217,18 +235,18 @@ def get_from_gmc(request):
 @api_view(["POST"])
 @permission_classes((AllowAny,))
 def add_country_to_allowed_or_denied(request):
-    gmc_url = "https://gmc.banduracyber.com/api/v1/policy/"+request.data['policy_uuid']+"/countries/"
+    url = gmc_url+"policy/"+request.data['policy_uuid']+"/countries/"
     if 'allowed' in request.data['type']:
-        request_url = gmc_url+request.data['type']
+        request_url = url+request.data['type']
     if 'denied' in request.data['type']:
-        request_url = gmc_url+request.data['type']
+        request_url = url+request.data['type']
 
     params = {
         'codes': request.data['country_code']
     }
     headers = {
         "accept": "application/json",
-        "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
+        "x-api-key": key
     }
     data = requests.patch(request_url, params=params, headers=headers)
     print("Data from gmc after allowed or denied->", data.json())
@@ -262,7 +280,7 @@ def add_or_delete_to_whitelist_and_blacklist(request):
 def send_email(host, is_secure):
     print("inside send_email() method")
     email_alert_object = json.loads(serializers.serialize('json', EmailAlerts.objects.all()))
-    fromaddr = "banduratest@outlook.com"
+    fromaddr = from_email
     toaddr = ""
     days_difference = None
     str_time = "{0:0>2}".format(str(datetime.now().hour)) + ":" + "{0:0>2}".format(str(datetime.now().minute)) + ":00"
@@ -312,10 +330,15 @@ def email(fromaddr, to, obj, host, is_secure):
     url = ""
     es_data = {}
     host_arr = host.split(":")
+    elasticsearch_host = settings.ELASTICSEARCH_HOST
+    print("running host->", elasticsearch_host)
+    if host_arr[0].lower() == 'localhost' or host_arr[0] == '127.0.0.1':
+        elasticsearch_host = host_arr[0]
+    print("ElasticSearch host-> ", elasticsearch_host)
     if is_secure:
-        url = "https://" + host_arr[0] + ":9200/"
+        url = "https://" + elasticsearch_host + ":9200/"
     else:
-        url = "http://" + host_arr[0] + ":9200/"
+        url = "http://" + elasticsearch_host + ":9200/"
     es_url = url + "logstash-" + obj['fields']['log_type'] + "/_search"
     if not obj['fields']['include_all']:
         get_request_query(obj)
@@ -367,23 +390,26 @@ def email(fromaddr, to, obj, host, is_secure):
     msg.attach(p)
 
     # creates SMTP session
-    # s = smtplib.SMTP('smtp.office365.com', 587)
-    s = smtplib.SMTP('smtp-mail.outlook.com', 587)
-    # start TLS for security
-    s.starttls()
+    # s = smtplib.SMTP('smtp.office365.com', port)
+    try:
+        s = smtplib.SMTP(smtp_server, port)
+        # start TLS for security
+        s.starttls()
+        print("from address email before login->", fromaddr)
+        # Authentication
+        s.login(fromaddr, password)
 
-    # Authentication
-    s.login(fromaddr, "$0ftw@re")
+        # Converts the Multipart msg into a string
+        text = msg.as_string()
 
-    # Converts the Multipart msg into a string
-    text = msg.as_string()
+        # sending the mail
+        s.sendmail(fromaddr, to, text)
 
-    # sending the mail
-    s.sendmail(fromaddr, to, text)
-
-    print("mail sent->")
-    # terminating the session
-    s.quit()
+        print("mail sent->")
+        # terminating the session
+        s.quit()
+    except smtplib.SMTPException:
+        logger.error("Error: unable to send email", format_exc())
 
 
 def get_request_query(obj):
@@ -513,7 +539,7 @@ def create_file(data_obj):
     # f.close()
     print("After json file creation")
     # open a file for writing
-    data_file = open("./logfile.csv", 'w+')
+    data_file = open("./logfile.csv", 'w+', newline='')
     # create the csv writer object
     csv_writer = csv.writer(data_file)
     count = 0

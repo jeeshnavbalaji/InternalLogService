@@ -240,7 +240,8 @@ def add_country_to_allowed_or_denied(request):
 @permission_classes((AllowAny,))
 def add_or_delete_to_whitelist_and_blacklist(request):
     gmc_url = "https://gmc.banduracyber.com/api/v1/"
-    request_url = gmc_url+request.data['list_type']+"/ipv4/"+request.data['group_uuid']+"/addrs"
+    list_type_lower = request.data['list_type'].lower()
+    request_url = gmc_url+list_type_lower+"/ipv4/"+request.data['group_uuid']+"/addrs"
     params = {
         'ip_addr': request.data['ip_address'],
         'mask_bits': 32
@@ -249,7 +250,7 @@ def add_or_delete_to_whitelist_and_blacklist(request):
         "accept": "application/json",
         "x-api-key": "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
     }
-    if request.data['action_type'] == 'deleted':
+    if request.data['action_type'] == 'Deleted':
         set_address_url = request_url+'/'+request.data['ip_address']+'/32'
         data = requests.delete(set_address_url, headers=headers)
     else:

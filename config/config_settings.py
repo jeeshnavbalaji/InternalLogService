@@ -1,13 +1,13 @@
-#User inputs. Do not change variable names
-URL= "https://gmc.banduracyber.com/api/v1/"
-GMC_KEY= "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
+# User inputs. Do not change variable names
+URL = "https://gmc.banduracyber.com/api/v1/"
+GMC_KEY = "YFRGAVB4FZDCN1D3W1UT:CDDMDggQlObF8mslPxAnhimFKJeTaH9V"
 FROM_EMAIL = "banduratest@gmail.com"
 PASSWORD = "$0ftw@re"
 MAIL_HOST = "gmail"
 ELASTICSEARCH_HOST = "44.231.127.12"
 
 
-#SMTP servers
+# SMTP servers
 SMTP_SERVERS= {
     "gmail": "smtp.gmail.com",
     "office365": "smtp.office365.com",

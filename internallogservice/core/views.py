@@ -215,17 +215,30 @@ def edit_email_alert(request):
 def get_from_gmc(request):
     if 'policy' in request.data:
         request_url = gmc_url+request.data['policy']
+        headers = {
+            "accept": "application/json",
+            "x-api-key": key
+        }
     if 'country' in request.data:
         request_url = gmc_url+request.data['country']
+        headers = {
+            "accept": "application/json",
+            "x-api-key": key
+        }
     if 'whitelist' in request.data:
         request_url = gmc_url+request.data['whitelist']+'/ipv4'
+        headers = {
+            "accept": "application/json",
+            "x-api-key": key,
+            "X-Fields": "{uuid, name, type, ip_count}"
+        }
     if 'blacklist' in request.data:
         request_url = gmc_url+request.data['blacklist']+'/ipv4'
-
-    headers = {
-        "accept": "application/json",
-        "x-api-key": key
-    }
+        headers = {
+            "accept": "application/json",
+            "x-api-key": key,
+            "X-Fields": "{uuid, name, type, ip_count}"
+        }
     data = requests.get(request_url, headers=headers)
     print("Data from gmc->", data.json())
     return Response(data.json(), status=HTTP_200_OK)
@@ -274,6 +287,24 @@ def add_or_delete_to_whitelist_and_blacklist(request):
         data = requests.post(request_url, params=params, headers=headers)
     print("Data from gmc after update in list->", data.json())
     return Response(data.json(), status=HTTP_200_OK)
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def check_ipaddress_in_listgroup(request):
+    response_data = []
+    request_url = gmc_url+request.data['grouptype']+"/ipv4/"+request.data['group_uuid']+"/addrs"
+    response_data.append(request.data['group_uuid'])
+    headers = {
+        "accept": "application/json",
+        "x-api-key": key
+    }
+    data = requests.get(request_url, headers=headers)
+    response_data.append(data.json())
+    print('Grouplist ipaddress++++++++++++++++++++++++++++++++++++++++++++++')
+    print(request_url)
+    print("Data from grouplist->", response_data)
+    return Response(response_data, status=HTTP_200_OK)
 
 
 def send_email(host, is_secure):

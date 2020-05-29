@@ -275,6 +275,23 @@ def add_or_delete_to_whitelist_and_blacklist(request):
     print("Data from gmc after update in list->", data.json())
     return Response(data.json(), status=HTTP_200_OK)
 
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def check_ipaddress_in_listgroup(request):
+    response_data = []
+    request_url = gmc_url+request.data['grouptype']+"/ipv4/"+request.data['group_uuid']+"/addrs"
+    response_data.append(request.data['group_uuid'])
+    headers = {
+        "accept": "application/json",
+        "x-api-key": key
+    }
+    data = requests.get(request_url, headers=headers)
+    response_data.append(data.json())
+    print('Grouplist ipaddress++++++++++++++++++++++++++++++++++++++++++++++')
+    print(request_url)
+    print("Data from grouplist->", response_data)
+    return Response(response_data, status=HTTP_200_OK)
 
 def send_email(host, is_secure):
     print("inside send_email() method")

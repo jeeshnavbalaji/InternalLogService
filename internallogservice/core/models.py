@@ -41,6 +41,9 @@ class EmailAlerts(models.Model):
                self.packet_action, self.packet_category, self.packet_reason, self.packet_list, self.packet_group, \
                self.packet_device
 
+    class Meta:
+        verbose_name_plural = 'EmailAlerts'
+
 
 # class DomainFields(models.Model):
 #     email_alerts = models.ForeignKey(EmailAlerts, on_delete=models.CASCADE)

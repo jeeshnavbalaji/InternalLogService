@@ -35,8 +35,8 @@ logger = logging.getLogger('schedule')
 tl = Timeloop()
 try:
     gmc_url = settings.URL
-    key = settings.GMC_KEY
-    print("Gmc host-> ", settings.URL, "auth_key-> ", key)
+    # key = settings.GMC_KEY
+    # print("Gmc host-> ", settings.URL, "auth_key-> ", key)
     from_email = settings.FROM_EMAIL
     password = settings.PASSWORD
     smtp_servers = settings.SMTP_SERVERS
@@ -52,6 +52,23 @@ try:
 except Exception:
     logger.error(format_exc())
 
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def gmckey_setup(request):
+    global key
+    key = request.data["apikey"]
+    headers = {
+        "accept": "application/json",
+        "x-api-key": key
+    }
+    print(key)
+    data = requests.get("https://gmc.banduracyber.com/api/v1/asn", headers=headers)
+    print("Data from gmc->", data)
+    if (data.status_code == 500):
+        return Response(json.loads(data.text)['message'], status=data.status_code)
+    else:
+        return Response(data, status=HTTP_200_OK)
 
 @csrf_exempt
 @api_view(["POST"])
@@ -70,7 +87,6 @@ def login(request):
     return Response({'token': token.key},
 
                     status=HTTP_200_OK)
-
 
 @csrf_exempt
 @api_view(["DELETE"])

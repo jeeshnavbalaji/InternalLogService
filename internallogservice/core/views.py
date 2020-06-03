@@ -65,10 +65,10 @@ def gmckey_setup(request):
     print(key)
     data = requests.get("https://gmc.banduracyber.com/api/v1/asn", headers=headers)
     print("Data from gmc->", data)
-    if (data.status_code == 500):
-        return Response(json.loads(data.text)['message'], status=data.status_code)
-    else:
+    if (data.status_code == 200):
         return Response(data, status=HTTP_200_OK)
+    else:
+        return Response(json.loads(data.text)['message'], status=data.status_code)
 
 @csrf_exempt
 @api_view(["POST"])

@@ -52,6 +52,7 @@ try:
 except Exception:
     logger.error(format_exc())
 
+
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
@@ -87,6 +88,7 @@ def login(request):
     return Response({'token': token.key},
 
                     status=HTTP_200_OK)
+
 
 @csrf_exempt
 @api_view(["DELETE"])
@@ -254,6 +256,12 @@ def get_from_gmc(request):
             "accept": "application/json",
             "x-api-key": key,
             "X-Fields": "{uuid, name, type, ip_count}"
+        }
+    if 'type' in request.data:
+        request_url = gmc_url+"policy/"+request.data['policyId']+"/countries/"+request.data['type']
+        headers = {
+            "accept": "application/json",
+            "x-api-key": key
         }
     data = requests.get(request_url, headers=headers)
     print("Data from gmc->", data.json())

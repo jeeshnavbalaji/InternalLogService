@@ -6,3 +6,4 @@ from internallogservice.core.models import *
 
 
 admin.site.register(EmailAlerts)
+admin.site.register(GMCApiKey)

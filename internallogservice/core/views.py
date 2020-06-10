@@ -10,7 +10,7 @@ from rest_framework.status import (
     HTTP_200_OK,
     HTTP_403_FORBIDDEN)
 from rest_framework.response import Response
-from internallogservice.core.models import EmailAlerts
+from internallogservice.core.models import EmailAlerts, GMCApiKey
 from schedule import default_scheduler as schedule
 import time
 import smtplib
@@ -35,7 +35,6 @@ logger = logging.getLogger('schedule')
 tl = Timeloop()
 try:
     gmc_url = settings.URL
-    # key = settings.GMC_KEY
     # print("Gmc host-> ", settings.URL, "auth_key-> ", key)
     from_email = settings.FROM_EMAIL
     password = settings.PASSWORD
@@ -60,21 +59,26 @@ def gmckey_setup(request):
     global key
     key = request.data["apikey"]
     headers = {
-        "accept": "application/json",
-        "x-api-key": key
-    }
+                "accept": "application/json",
+                "x-api-key": key
+            }
     print(key)
     data = requests.get("https://gmc.banduracyber.com/api/v1/asn", headers=headers)
     print("Data from gmc->", data)
-    if (data.status_code == 200):
+    if data.status_code == 200:
+        gmc_api_key_object = GMCApiKey(id=1, api_key=key)
+        gmc_api_key_object.save()
         return Response(data, status=HTTP_200_OK)
     else:
         return Response(json.loads(data.text)['message'], status=data.status_code)
+
 
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
 def login(request):
+    global key
+    api_key = ''
     username = request.data.get("username")
     password = request.data.get("password")
     if username is None or password is None:
@@ -85,9 +89,16 @@ def login(request):
         return Response({'error': 'Invalid Credentials'},
                         status=HTTP_403_FORBIDDEN)
     token, _ = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key},
-
-                    status=HTTP_200_OK)
+    try:
+        data = GMCApiKey.objects.get()
+    except GMCApiKey.DoesNotExist:
+        data = None
+    print(data)
+    if data:
+        api_key = str(data)
+        key = api_key
+    print("Api key->", api_key)
+    return Response({'token': token.key, 'gmc_api_key': api_key}, status=HTTP_200_OK)
 
 
 @csrf_exempt

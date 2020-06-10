@@ -45,35 +45,10 @@ class EmailAlerts(models.Model):
         verbose_name_plural = 'EmailAlerts'
 
 
-# class DomainFields(models.Model):
-#     email_alerts = models.ForeignKey(EmailAlerts, on_delete=models.CASCADE)
-#     domain = models.CharField(max_length=254)
-#     proto = models.CharField(max_length=254)
-#     source = models.GenericIPAddressField()
-#     destination = models.GenericIPAddressField()
-#     action = models.CharField(max_length=100)
-#     reason = models.TextField(blank=True)
-#     device = models.TextField(blank=True)
-#
-#     def __str__(self):
-#         return self.domain, self.proto, self.source, self.destination, self.action, self.reason, self.device
-#
-#
-# class PacketFields(models.Model):
-#     email_alerts = models.ForeignKey(EmailAlerts, on_delete=models.CASCADE)
-#     country = models.CharField(max_length=254)
-#     asName = models.CharField(max_length=254)
-#     proto = models.CharField(max_length=254)
-#     source = models.GenericIPAddressField()
-#     destination = models.GenericIPAddressField()
-#     direction = models.CharField(max_length=254)
-#     action = models.CharField(max_length=254)
-#     category = models.CharField(max_length=254)
-#     reason = models.TextField(blank=True)
-#     list = models.CharField(max_length=254)
-#     group = models.CharField(max_length=254)
-#     device = models.TextField(blank=True)
-#
-#     def __str__(self):
-#         return self.country, self.asName, self.proto, self.source, self.destination, \
-#                self.direction, self.action, self.category, self.reason, self.list, self.group, self.device
+class GMCApiKey(models.Model):
+    api_key = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.api_key
+
+

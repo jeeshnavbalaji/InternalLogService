@@ -35,11 +35,12 @@ class EmailAlerts(models.Model):
     packet_device = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return self.email, self.send_log, self.day_of_week, self.time, self.file_format, self.include_all, \
-               self.log_type, self.created_date, self.sent_date, self.packet_country, self.packet_asName, \
-               self.packet_proto, self.packet_source, self.packet_destination, self.packet_direction, \
-               self.packet_action, self.packet_category, self.packet_reason, self.packet_list, self.packet_group, \
-               self.packet_device
+        template = '{0.email} {0.send_log} {0.day_of_week} {0.time} {0.file_format} {0.include_all} \
+                {0.log_type} {0.created_date} {0.sent_date} {0.packet_country} {0.packet_asName} \
+                {0.packet_proto} {0.packet_source} {0.packet_destination} {0.packet_direction} \
+                {0.packet_action} {0.packet_category} {0.packet_reason} {0.packet_list} {0.packet_group} \
+                {0.packet_device}'
+        return template.format(self)
 
     class Meta:
         verbose_name_plural = 'EmailAlerts'

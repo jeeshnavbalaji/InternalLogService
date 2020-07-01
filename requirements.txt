@@ -10,6 +10,7 @@ cryptography==2.8
 Django==3.0.4
 django-celery==3.3.1
 django-cors-headers==3.2.1
+django-crontab==0.7.1
 django-sslserver==0.22
 djangorestframework==3.11.0
 djangorestframework-jwt==1.11.0
@@ -31,4 +32,5 @@ schedule==0.6.0
 six==1.14.0
 sqlparse==0.3.1
 timeloop==1.0.2
+tzlocal==2.1
 urllib3==1.25.9

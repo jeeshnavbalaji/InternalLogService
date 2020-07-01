@@ -22,8 +22,8 @@ import json
 import csv
 import requests
 from django.core import serializers
-import threading
-from crontab import CronTab
+from pytz import timezone
+from tzlocal import get_localzone
 import logging
 from traceback import format_exc
 from datetime import timedelta
@@ -186,25 +186,34 @@ def email_alert(request):
                                          domain_reason=domain_reason, domain_device=domain_device)
         email_alert_object.save()
 
+    utc_datetime = datetime.now(timezone('UTC'))
+    send_time_parts = send_time.split(":")
+    new_datetime = utc_datetime.replace(hour=int(send_time_parts[0]), minute=int(send_time_parts[1]))
+    # new_datetime_parts = str(new_datetime.split("."))
+    # utc_datetime_timestamp = float(new_datetime.strftime("%s"))
+    local_datetime_converted = new_datetime.astimezone(get_localzone())
+    schedule_at_time = "{0:0>2}".format(str(local_datetime_converted.hour))+":" +\
+                       "{0:0>2}".format(str(local_datetime_converted.minute))
+    print("Time to set at method perameter-> ", schedule_at_time)
     # scheduler setup
     # scheduler = EmailScheduler()
     if send_log == "daily":
-        schedule.every().day.at(send_time).do(send_email, request.get_host(), request.is_secure())
+        schedule.every().day.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
     if send_log == "weekly" or send_log == "monthly":
         if day_of_week == "sunday":
-            schedule.every().sunday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().sunday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
         if day_of_week == "monday":
-            schedule.every().monday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().monday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
         if day_of_week == "tuesday":
-            schedule.every().tuesday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().tuesday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
         if day_of_week == "wednesday":
-            schedule.every().wednesday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().wednesday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
         if day_of_week == "thursday":
-            schedule.every().thursday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().thursday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
         if day_of_week == "friday":
-            schedule.every().friday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().friday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
         if day_of_week == "saturday":
-            schedule.every().saturday.at(send_time).do(send_email, request.get_host(), request.is_secure())
+            schedule.every().saturday.at(schedule_at_time).do(send_email, request.get_host(), request.is_secure())
 
     # email_cron = CronTab(tab="""* * * * * python email_schedule.py""")
     # job = email_cron.new(command='* * * * * python email_schedule.py')
@@ -349,7 +358,7 @@ def send_email(host, is_secure):
     fromaddr = from_email
     toaddr = ""
     days_difference = None
-    str_time = "{0:0>2}".format(str(datetime.now().hour)) + ":" + "{0:0>2}".format(str(datetime.now().minute)) + ":00"
+    str_time = "{0:0>2}".format(str(datetime.utcnow().hour)) + ":" + "{0:0>2}".format(str(datetime.utcnow().minute)) + ":00"
     print("str_time->", str_time)
     for alert_obj in email_alert_object:
         # print(alert_obj)

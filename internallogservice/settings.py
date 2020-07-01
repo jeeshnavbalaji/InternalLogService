@@ -76,6 +76,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 # ]
 
 ROOT_URLCONF = 'internallogservice.urls'
+# BASE_DIR = "/code/" while deploying in docker
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+'\internallogservice'
 TEMPLATES = [
     {

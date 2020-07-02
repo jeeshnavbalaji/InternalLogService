@@ -229,11 +229,11 @@ def email_alert(request):
     #     schedule.run_pending()
     #     time.sleep(1)
     # if __name__ == "__main__":
-    try:
-        print("timeloop jobs", list(tl.jobs))
-        tl.start()
-    except Exception:
-        logger.error(format_exc())
+    # try:
+        # print("timeloop jobs", list(tl.jobs))
+    #     tl.start()
+    # except Exception:
+    #     logger.error(format_exc())
     return Response(status=HTTP_200_OK)
 
 
@@ -642,8 +642,16 @@ def create_file(data_obj):
         print("After csv file creation")
 
 
-@tl.job(interval=timedelta(seconds=1))
-def check_pending():
+# @tl.job(interval=timedelta(seconds=1))
+# def check_pending():
+
+@csrf_exempt
+@api_view(["GET"])
+def sample_api(request):
+    data = {'sample_data': 123}
+    return Response(data, status=HTTP_200_OK)
+
+def my_cron_job():
     logger.info("Checking schedule pending jobs")
     try:
         schedule.run_pending()
@@ -651,8 +659,3 @@ def check_pending():
         logger.error(format_exc())
 
 
-@csrf_exempt
-@api_view(["GET"])
-def sample_api(request):
-    data = {'sample_data': 123}
-    return Response(data, status=HTTP_200_OK)

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 
     #Local Apps
     'internallogservice.core',
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -103,7 +104,7 @@ WSGI_APPLICATION = 'internallogservice.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'db.sqlite3'),
     }
 }
 
@@ -189,3 +190,7 @@ JWT_AUTH = {
     'JWT_ISSUER': JWT_ISSUER,
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
 }
+
+CRONJOBS = [
+    ('* * * * *', 'internallogservice.core.views.my_cron_job')
+]

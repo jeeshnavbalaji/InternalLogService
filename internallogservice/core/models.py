@@ -36,10 +36,11 @@ class EmailAlerts(models.Model):
 
     def __str__(self):
         template = '{0.email} {0.send_log} {0.day_of_week} {0.time} {0.file_format} {0.include_all} \
-                {0.log_type} {0.created_date} {0.sent_date} {0.packet_country} {0.packet_asName} \
+                {0.log_type} {0.created_date} {0.sent_date} {0.remarks} {0.packet_country} {0.packet_asName} \
                 {0.packet_proto} {0.packet_source} {0.packet_destination} {0.packet_direction} \
                 {0.packet_action} {0.packet_category} {0.packet_reason} {0.packet_list} {0.packet_group} \
-                {0.packet_device}'
+                {0.packet_device} {0.domain_domain} {0.domain_proto} {0.domain_source} {0.domain_destination}  \
+                {0.domain_action} {0.domain_reason} {0.domain_device}'
         return template.format(self)
 
     class Meta:

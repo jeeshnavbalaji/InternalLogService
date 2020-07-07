@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'schedule',
     'requests',
     'crontab',
+    'django_crontab',
 
     #Local Apps
     'internallogservice.core',
@@ -77,11 +78,11 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = 'internallogservice.urls'
 # BASE_DIR = "/code/" while deploying in docker
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+'\internallogservice'
+BASE_DIR = "/code/"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'internallogservice/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -124,6 +125,10 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
+CRONJOBS = [
+    ('0 * * * *', 'internallogservice.core.views.elasticsearch_log_rotation')
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators

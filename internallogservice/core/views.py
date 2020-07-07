@@ -48,6 +48,7 @@ try:
     else:
         port = settings.port[0]
     print("port->", port)
+    elasticsearch_logrotation_days = settings.ELASTICSEARCH_LOGROTATION_DAYS
 except Exception:
     logger.error(format_exc())
 
@@ -120,6 +121,10 @@ def email_alert(request):
     print(request.data)
     print("host->", request.get_host())
     print("is_secure->", request.is_secure())
+    global local_host
+    global app_is_secure
+    local_host = request.get_host()
+    app_is_secure = request.is_secure()
     for mail in request.data['email']:
         email = mail
         send_log = request.data['sendLog']
@@ -128,8 +133,8 @@ def email_alert(request):
         file_format = request.data['fileFormat']
         include_all = request.data['includeAll']
         log_type = request.data['logType']
-        created_date = datetime.now()
-        sent_date = datetime.now()
+        created_date = datetime.utcnow()
+        sent_date = datetime.utcnow()
         domain_domain = None
         domain_proto = None
         domain_source = None
@@ -149,7 +154,7 @@ def email_alert(request):
         packet_lists = None
         packet_group = None
         packet_host_name = None
-        if log_type == 'packet' and not include_all:
+        if log_type == 'packet' and include_all == 'False':
             packet_country = request.data['packet']['country']
             packet_as_name = request.data['packet']['asName']
             packet_proto = request.data['packet']['proto']
@@ -163,7 +168,7 @@ def email_alert(request):
             packet_group = request.data['packet']['group']
             packet_host_name = request.data['packet']['hostName']
 
-        if log_type == 'domain' and not include_all:
+        if log_type == 'domain' and not include_all == 'False':
             domain_domain = request.data['domain']['domain']
             domain_proto = request.data['domain']['proto']
             domain_source = request.data['domain']['source']
@@ -174,16 +179,17 @@ def email_alert(request):
 
         email_alert_object = EmailAlerts(email=str(email), send_log=send_log, day_of_week=day_of_week, time=send_time,
                                          file_format=file_format, include_all=include_all, log_type=log_type,
-                                         created_date=created_date, sent_date=sent_date, packet_country=packet_country,
-                                         packet_asName=packet_as_name, packet_proto=packet_proto,
-                                         packet_source=packet_source, packet_destination=packet_destination,
-                                         packet_direction=packet_direction, packet_action=packet_action,
-                                         packet_category=packet_category, packet_reason=packet_reason,
-                                         packet_list=packet_lists, packet_group=packet_group,
-                                         packet_device=packet_host_name, domain_domain=domain_domain,
-                                         domain_proto=domain_proto, domain_source=domain_source,
-                                         domain_destination=domain_destination, domain_action=domain_action,
-                                         domain_reason=domain_reason, domain_device=domain_device)
+                                         created_date=created_date, sent_date=sent_date, remarks=None,
+                                         packet_country=packet_country, packet_asName=packet_as_name,
+                                         packet_proto=packet_proto, packet_source=packet_source,
+                                         packet_destination=packet_destination, packet_direction=packet_direction,
+                                         packet_action=packet_action, packet_category=packet_category,
+                                         packet_reason=packet_reason, packet_list=packet_lists,
+                                         packet_group=packet_group, packet_device=packet_host_name,
+                                         domain_domain=domain_domain, domain_proto=domain_proto,
+                                         domain_source=domain_source, domain_destination=domain_destination,
+                                         domain_action=domain_action, domain_reason=domain_reason,
+                                         domain_device=domain_device)
         email_alert_object.save()
 
     utc_datetime = datetime.now(timezone('UTC'))
@@ -368,7 +374,7 @@ def send_email(host, is_secure):
             sent_date = alert_obj['fields']['sent_date'].split("T")
             # print("alert_obj date->", alert_obj['fields']['sent_date'])
             # print("date from db->", datetime.strptime(sent_date[0], '%Y-%m-%d'))
-            days_difference = datetime.now() - datetime.strptime(sent_date[0], '%Y-%m-%d')
+            days_difference = datetime.utcnow() - datetime.strptime(sent_date[0], '%Y-%m-%d')
             # print("sent days->", days_difference.days)
         if alert_obj['fields']['time'] == str_time and alert_obj['fields']['send_log'] == 'daily':
             print("daily time->", alert_obj['fields']['time'])
@@ -407,25 +413,47 @@ def email(fromaddr, to, obj, host, is_secure):
     host_arr = host.split(":")
     elasticsearch_host = settings.ELASTICSEARCH_HOST
     print("running host->", elasticsearch_host)
-    if host_arr[0].lower() == 'localhost' or host_arr[0] == '127.0.0.1':
-        elasticsearch_host = host_arr[0]
-    print("ElasticSearch host-> ", elasticsearch_host)
-    if is_secure:
-        url = "https://" + elasticsearch_host + ":9200/"
-    else:
-        url = "http://" + elasticsearch_host + ":9200/"
-    es_url = url + "logstash-" + obj['fields']['log_type'] + "/_search"
+    # if host_arr[0].lower() == 'localhost' or host_arr[0] == '127.0.0.1':
+    #     elasticsearch_host = host_arr[0]
+    # print("ElasticSearch host-> ", elasticsearch_host)
+    # if is_secure:
+    #     url = "https://" + elasticsearch_host + ":9200/"
+    # else:
+    #     url = "http://" + elasticsearch_host + ":9200/"
+    url = elasticsearch_host + ":9200/"
+    es_url = url + "logstash-" + obj['fields']['log_type'] + "/_search?size=10000&pretty=true"
     if not obj['fields']['include_all']:
-        get_request_query(obj)
-        es_data = requests.post()
+        pay_load = json.dumps(get_request_query(obj))
+        headers = {
+            "Content-Type": "application/json"
+        }
+        print('post es pay load->', pay_load)
+        es_data = requests.post(es_url, data=pay_load, headers=headers, verify=False)
     else:
         print("inside es get else condition:", es_url)
-        es_data = requests.get(es_url)
+        headers = {
+            "Content-Type": "application/json"
+        }
+        query_get_all = {
+            "query": {
+                 "match_all": {}
+             },
+            "sort": [
+                {
+                    "timestamp": {
+                        "order": "desc"
+                    }
+                }
+            ]
+        }
+        data_to_send = json.dumps(query_get_all)
+        es_data = requests.post(es_url, data=data_to_send, headers=headers, verify=False)
+    if es_data.status_code == 200:
         data = es_data.json()
         create_file(data)
-        print("Data from Elasticsearch->")
-        print("total docs->", data['hits']['total']['value'], "Relation->", data['hits']['total']['relation'])
-        print("Device name->", data['hits']['hits'][0]['_source']['HName'])
+    print("Data from Elasticsearch->")
+    print("total docs->", data['hits']['total']['value'], "Relation->", data['hits']['total']['relation'])
+    print("Device name->", data['hits']['hits'][0]['_source']['HName'])
 
     # instance of MIMEMultipart
     print("to addresses", to)
@@ -490,15 +518,42 @@ def email(fromaddr, to, obj, host, is_secure):
 def get_request_query(obj):
     query_obj = {}
     if obj['fields']['log_type'] == "packet":
-        query_obj = obj['fields']['packet']
+        query_obj = {
+            "Country": obj['fields']['packet_country'],
+            "asName": obj['fields']['packet_asName'],
+            "Proto": obj['fields']['packet_proto'],
+            "source": obj['fields']['packet_source'],
+            "destination": obj['fields']['packet_destination'],
+            "Direction": obj['fields']['packet_direction'],
+            "Action": obj['fields']['packet_action'],
+            "matched_categories": obj['fields']['packet_category'],
+            "denied_categories": obj['fields']['packet_category'],
+            "reason": obj['fields']['packet_reason'],
+            "threatlists": obj['fields']['packet_list'],
+            "whitelists_active": obj['fields']['packet_list'],
+            "whitelists_inactive": obj['fields']['packet_list'],
+            "blacklists_active": obj['fields']['packet_list'],
+            "blacklists_inactive": obj['fields']['packet_list'],
+            "Group": obj['fields']['packet_group'],
+            "HName": obj['fields']['packet_device']
+        }
     elif obj['fields']['log_type'] == "domain":
-        query_obj = obj['fields']['domain']
+        query_obj = {
+            "Domain": obj['fields']['domain_domain'],
+            "Proto": obj['fields']['domain_proto'],
+            "Source": obj['fields']['domain_source'],
+            "DST": obj['fields']['domain_destination'],
+            "Action": obj['fields']['domain_action'],
+            "Reason": obj['fields']['domain_reason'],
+            "HName": obj['fields']['domain_device']
+        }
 
     if not query_obj:
         query_obj = obj
     else:
-        query_obj = {k: v for k, v in query_obj.items() if "Select" not in v}
+        query_obj = {k: v for k, v in query_obj.items() if v is not None and "Select" not in v and not v.isspace() and v}
 
+    print("Query Object->", query_obj)
     fields_arr = list(query_obj.keys())
     query_string = ""
     for v in list(query_obj.values()):
@@ -520,19 +575,8 @@ def get_request_query(obj):
                 "must": [
                     {
                         "query_string": {
-                            "fields": [
-                                fields_arr
-                            ],
+                            "fields": fields_arr,
                             "query": query_string
-                        }
-                    },
-                    {
-                        "range": {
-                            "timestamp": {
-                                "time_zone": "+01:00",
-                                "gte": start_date,
-                                "lte": "now"
-                            }
                         }
                     }
                 ]
@@ -555,23 +599,30 @@ def create_file(data_obj):
     packet_logs = []
     domain_logs = []
     # f = open("./logfile.json", "w")
+    # print("create file data object-> ", data_obj)
     for data in data_obj['hits']['hits']:
         if data['_index'] == "logstash-packet":
             denied_category = ""
             matched_category = ""
             threatlists = ""
-            whitelists = ""
-            blacklists = ""
+            whitelists_active = ""
+            blacklists_active = ""
+            whitelists_inactive = ""
+            blacklists_inactive = ""
             if 'denied_categories' in data['_index']:
                 denied_category = data['_source']['denied_categories']
             if 'matched_categories' in data['_index']:
                 denied_category = data['_source']['matched_categories']
             if 'threatlists' in data['_index']:
                 threatlists = data['_source']['threatlists']
-            if 'whitelists' in data['_index']:
-                whitelists = data['_source']['whitelists']
-            if 'blacklists' in data['_index']:
-                blacklists = data['_source']['blacklists']
+            if 'whitelists_active' in data['_index']:
+                whitelists_active = data['_source']['whitelists_active']
+            if 'whitelists_inactive' in data['_index']:
+                whitelists_inactive = data['_source']['whitelists_inactive']
+            if 'blacklists_active' in data['_index']:
+                blacklists_active = data['_source']['blacklists_active']
+            if 'blacklists_inactive' in data['_index']:
+                blacklists_inactive = data['_source']['blacklists_inactive']
             packet_obj = {
                 "timestamp": data['_source']['timestamp'],
                 "country": data['_source']['Country'],
@@ -585,8 +636,10 @@ def create_file(data_obj):
                 "matched_category": matched_category,
                 "reason": data['_source']['reason'],
                 "threatlists": threatlists,
-                "whitelists": whitelists,
-                "blacklists": blacklists,
+                "whitelists_active": whitelists_active,
+                "blacklists_active": blacklists_active,
+                "whitelists_inactive": whitelists_inactive,
+                "blacklists_inactive": blacklists_inactive,
                 "group": data['_source']['Group'],
                 "device": data['_source']['HName']
             }
@@ -649,6 +702,49 @@ def check_pending():
         schedule.run_pending()
     except Exception:
         logger.error(format_exc())
+
+
+# This is to delete Elastic search docs which are older than 7 days. This job will run for every 24hrs
+def elasticsearch_log_rotation():
+    cronfile = open("logrotaion-deleterecord.log", 'a')
+    cronfile.write(str(datetime.now()))
+    # host_arr = local_host.split(":")
+    elasticsearch_host = settings.ELASTICSEARCH_HOST
+    # if host_arr[0].lower() == 'localhost' or host_arr[0] == '127.0.0.1':
+    #     elasticsearch_host = host_arr[0]
+    # print("ElasticSearch host-> ", elasticsearch_host)
+    # if app_is_secure:
+    #     url = "https://" + elasticsearch_host + ":9200/"
+    # else:
+    url = elasticsearch_host + ":9200/"
+    cronfile.write('ES URL ->' + str(url))
+    packet_es_url = url + "logstash-packet/_delete_by_query?refresh&slices=5"
+    domain_es_url = url + "logstash-domain/_delete_by_query?refresh&slices=5"
+    system_es_url = url + "logstash-system/_delete_by_query?refresh&slices=5"
+    audit_es_url = url + "logstash-audit/_delete_by_query?refresh&slices=5"
+    # local_tz = get_localzone()  # get local timezone
+    # now = datetime.now(local_tz)  # get timezone-aware datetime object
+    # today = datetime.strptime(now.strftime("%m/%d/%Y"), "%m/%d/%Y")
+    delete_lt_date = datetime.now() - timedelta(days=elasticsearch_logrotation_days)
+    pload = {
+        "query": {
+            "range": {
+                "timestamp": {
+                    "lt": str(delete_lt_date.date())
+                }
+            }
+        }
+    }
+    data = json.dumps(pload)
+    headers = {
+        "Content-Type": "application/json"
+    }
+    cronfile.write("\n")
+    cronfile.close()
+    packet_es_response = requests.post(packet_es_url, data=data, headers=headers, verify=False)
+    domain_es_response = requests.post(domain_es_url, data=data, headers=headers, verify=False)
+    system_es_response = requests.post(system_es_url, data=data, headers=headers, verify=False)
+    audit_es_response = requests.post(audit_es_url, data=data, headers=headers, verify=False)
 
 
 @csrf_exempt

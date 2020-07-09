@@ -10,7 +10,7 @@ from rest_framework.status import (
     HTTP_200_OK,
     HTTP_403_FORBIDDEN)
 from rest_framework.response import Response
-from internallogservice.core.models import EmailAlerts, GMCApiKey
+from internallogservice.core.models import EmailAlerts, ConfigValues
 from schedule import default_scheduler as schedule
 import time
 import smtplib
@@ -48,7 +48,14 @@ try:
     else:
         port = settings.port[0]
     print("port->", port)
-    elasticsearch_logrotation_days = settings.ELASTICSEARCH_LOGROTATION_DAYS
+    try:
+        data = ConfigValues.objects.get(pk=2)
+    except ConfigValues.DoesNotExist:
+        data = None
+    print(data)
+    if data:
+        log_rotation_days= str(data)
+        elasticsearch_logrotation_days = log_rotation_days
 except Exception:
     logger.error(format_exc())
 
@@ -56,9 +63,10 @@ except Exception:
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes((AllowAny,))
-def gmckey_setup(request):
+def config_setup(request): #config_setup
     global key
     key = request.data["apikey"]
+    log_rotation = request.data["logrotation"]
     headers = {
                 "accept": "application/json",
                 "x-api-key": key
@@ -66,13 +74,28 @@ def gmckey_setup(request):
     print(key)
     data = requests.get("https://gmc.banduracyber.com/api/v1/asn", headers=headers)
     print("Data from gmc->", data)
-    if data.status_code == 200:
-        gmc_api_key_object = GMCApiKey(id=1, api_key=key)
-        gmc_api_key_object.save()
+    if key and log_rotation:
+        if data.status_code == 200:
+            gmc_api_key_object = ConfigValues(id=1, api_key=key)
+            gmc_log_object = ConfigValues(id=2, logrotaion_days=log_rotation)
+            gmc_api_key_object.save()
+            gmc_log_object.save()
+            return Response(data, status=HTTP_200_OK)
+        else:
+            return Response(json.loads(data.text)['message'], status=data.status_code)
+    elif key:
+        if data.status_code == 200:
+            gmc_api_key_object = ConfigValues(id=1, api_key=key)
+            gmc_api_key_object.save()
+            return Response(data, status=HTTP_200_OK)
+        else:
+            return Response(json.loads(data.text)['message'], status=data.status_code)
+    elif log_rotation:
+        gmc_log_object = ConfigValues(id=2, logrotaion_days=log_rotation)
+        gmc_log_object.save()
         return Response(data, status=HTTP_200_OK)
     else:
         return Response(json.loads(data.text)['message'], status=data.status_code)
-
 
 @csrf_exempt
 @api_view(["POST"])
@@ -91,8 +114,8 @@ def login(request):
                         status=HTTP_403_FORBIDDEN)
     token, _ = Token.objects.get_or_create(user=user)
     try:
-        data = GMCApiKey.objects.get()
-    except GMCApiKey.DoesNotExist:
+        data = ConfigValues.objects.get(pk=1)
+    except ConfigValues.DoesNotExist:
         data = None
     print(data)
     if data:

@@ -47,10 +47,13 @@ class EmailAlerts(models.Model):
         verbose_name_plural = 'EmailAlerts'
 
 
-class GMCApiKey(models.Model):
+class ConfigValues(models.Model):
     api_key = models.TextField(null=True, blank=True)
-
+    logrotaion_days = models.TextField(null=True, blank=True)
     def __str__(self):
-        return self.api_key
+        template = '{0.api_key} {0.logrotaion_days}'
+        return template.format(self)
+    class Meta:
+        verbose_name_plural = 'ConfigValues'
 
 

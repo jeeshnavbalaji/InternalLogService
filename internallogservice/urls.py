@@ -20,7 +20,7 @@ from django.contrib import admin
 from django.urls import path
 from .core.views import login, sample_api, email_alert, edit_email_alert, delete_email_alert, get_from_gmc, \
     add_country_to_allowed_or_denied, add_or_delete_to_whitelist_and_blacklist, check_ipaddress_in_listgroup, \
-    gmckey_setup
+    gmckey_setup, get_recent_or_old_docs, get_logs, query_filter, get_all_records
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,5 +33,9 @@ urlpatterns = [
     path('api/countryallowordeny', add_country_to_allowed_or_denied),
     path('api/ipupdatewhiteandblacklist', add_or_delete_to_whitelist_and_blacklist),
     path('api/checkipaddressgroup', check_ipaddress_in_listgroup),
-    path('api/gmckey', gmckey_setup)
+    path('api/gmckey', gmckey_setup),
+    path('api/getrecentorolddocs', get_recent_or_old_docs),
+    path('api/getlogs', get_logs),
+    path('api/queryfilter', query_filter),
+    path('api/getallrecords', get_all_records)
 ]

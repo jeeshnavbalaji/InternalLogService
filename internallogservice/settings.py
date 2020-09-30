@@ -78,7 +78,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = 'internallogservice.urls'
 # BASE_DIR = "/code/" while deploying in docker
-BASE_DIR = "/code/"
+# BASE_DIR = "/code/"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -127,7 +127,8 @@ REST_FRAMEWORK = {
 }
 
 CRONJOBS = [
-    ('0 * * * *', 'internallogservice.core.views.elasticsearch_log_rotation')
+    ('0 * * * *', 'internallogservice.core.views.elasticsearch_log_rotation'),
+    ('* * * * *', 'internallogservice.core.views.send_email')
 ]
 
 # Password validation

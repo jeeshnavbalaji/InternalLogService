@@ -29,6 +29,7 @@ from traceback import format_exc
 from datetime import timedelta
 from timeloop import Timeloop
 from config import config_settings as settings
+import socket
 
 logger = logging.getLogger('schedule')
 
@@ -235,11 +236,11 @@ def email_alert(request):
     #     schedule.run_pending()
     #     time.sleep(1)
     # if __name__ == "__main__":
-    try:
-        print("timeloop jobs", list(tl.jobs))
-        tl.start()
-    except Exception:
-        logger.error(format_exc())
+    # try:
+    #     print("timeloop jobs", list(tl.jobs))
+    #     tl.start()
+    # except Exception:
+    #     logger.error(format_exc())
     return Response(status=HTTP_200_OK)
 
 
@@ -358,8 +359,8 @@ def check_ipaddress_in_listgroup(request):
     return Response(response_data, status=HTTP_200_OK)
 
 
-def send_email(host, is_secure):
-    print("inside send_email() method")
+def send_email():
+    print("inside send_email() method", socket.gethostbyname(socket.gethostname()))
     email_alert_object = json.loads(serializers.serialize('json', EmailAlerts.objects.all()))
     fromaddr = from_email
     toaddr = ""
@@ -379,38 +380,38 @@ def send_email(host, is_secure):
         if alert_obj['fields']['time'] == str_time and alert_obj['fields']['send_log'] == 'daily':
             print("daily time->", alert_obj['fields']['time'])
             toaddr = alert_obj['fields']['email']
-            email(fromaddr, toaddr, alert_obj, host, is_secure)
+            email(fromaddr, toaddr, alert_obj)
             # print("daily: ", toaddr)
 
         if alert_obj['fields']['send_log'] == 'weekly' and alert_obj['fields']['time'] == str_time:
             print("weekly->", alert_obj['fields']['time'])
             if alert_obj['fields']['sent_date'] and days_difference.days == 7:
                 toaddr = alert_obj['fields']['email']
-                email(fromaddr, toaddr, alert_obj, host, is_secure)
+                email(fromaddr, toaddr, alert_obj)
                 # print("weekly:", toaddr)
             elif not alert_obj['fields']['sent_date']:
                 toaddr = alert_obj['fields']['email']
-                email(fromaddr, toaddr, alert_obj, host, is_secure)
+                email(fromaddr, toaddr, alert_obj)
                 # print("weekly:", toaddr)
 
         if alert_obj['fields']['send_log'] == 'monthly' and alert_obj['fields']['time'] == str_time:
             print("monthly time->", alert_obj['fields']['time'])
             if alert_obj['fields']['sent_date'] and days_difference.days == 30:
                 toaddr = alert_obj['fields']['email']
-                email(fromaddr, toaddr, alert_obj, host, is_secure)
+                email(fromaddr, toaddr, alert_obj)
                 # print("monthly:", toaddr)
             elif not alert_obj['fields']['sent_date']:
                 toaddr = alert_obj['fields']['email']
-                email(fromaddr, toaddr, alert_obj, host, is_secure)
+                email(fromaddr, toaddr, alert_obj)
                 # print("monthly:", toaddr)
 
 
-def email(fromaddr, to, obj, host, is_secure):
+def email(fromaddr, to, obj):
     print("inside email() method")
     # get data from Elasticsearch
     url = ""
     es_data = {}
-    host_arr = host.split(":")
+    # host_arr = host.split(":")
     elasticsearch_host = settings.ELASTICSEARCH_HOST
     print("running host->", elasticsearch_host)
     # if host_arr[0].lower() == 'localhost' or host_arr[0] == '127.0.0.1':
@@ -695,13 +696,13 @@ def create_file(data_obj):
         print("After csv file creation")
 
 
-@tl.job(interval=timedelta(seconds=1))
-def check_pending():
-    logger.info("Checking schedule pending jobs")
-    try:
-        schedule.run_pending()
-    except Exception:
-        logger.error(format_exc())
+# @tl.job(interval=timedelta(seconds=1))
+# def check_pending():
+#     logger.info("Checking schedule pending jobs")
+#     try:
+#         schedule.run_pending()
+#     except Exception:
+#         logger.error(format_exc())
 
 
 # This is to delete Elastic search docs which are older than 7 days. This job will run for every 24hrs
@@ -745,6 +746,89 @@ def elasticsearch_log_rotation():
     domain_es_response = requests.post(domain_es_url, data=data, headers=headers, verify=False)
     system_es_response = requests.post(system_es_url, data=data, headers=headers, verify=False)
     audit_es_response = requests.post(audit_es_url, data=data, headers=headers, verify=False)
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def get_recent_or_old_docs(request):
+    size = request.GET.get('size')
+    pretty = request.GET.get('pretty')
+    log_type = request.GET.get('logType')
+    data_to_be_sent = request.data
+    url = settings.ELASTICSEARCH_HOST + ":9200/"
+    es_url = url + "logstash-" + log_type + "/_search?size=" + size + "&pretty=" + pretty
+    pay_load = json.dumps(data_to_be_sent)
+    headers = {
+        "Content-Type": "application/json"
+    }
+    print('post es pay load->', pay_load)
+    try:
+        es_data = requests.post(es_url, data=pay_load, headers=headers, verify=False)
+    except requests.exceptions.RequestException as e:
+        logger.error(format_exc())
+    return Response(es_data, status=HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def get_logs(request):
+    record_from = request.GET.get('from')
+    size = request.GET.get('size')
+    pretty = request.GET.get('pretty')
+    log_type = request.GET.get('logType')
+    data_to_be_sent = request.data
+    url = settings.ELASTICSEARCH_HOST + ":9200/"
+    es_url = url + "logstash-" + log_type + "/_search?from=" + record_from + "&size=" + size + "&pretty=" + pretty
+    pay_load = json.dumps(data_to_be_sent)
+    headers = {
+        "Content-Type": "application/json"
+    }
+    print('post es pay load->', pay_load)
+    try:
+        es_data = requests.post(es_url, data=pay_load, headers=headers, verify=False)
+    except requests.exceptions.RequestException as e:
+        logger.error(format_exc())
+    return Response(es_data, status=HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes((AllowAny,))
+def query_filter(request):
+    record_from = request.GET.get('from')
+    size = request.GET.get('size')
+    log_type = request.GET.get('logType')
+    data_to_be_sent = request.data
+    url = settings.ELASTICSEARCH_HOST + ":9200/"
+    es_url = url + "logstash-" + log_type + "/_search?size=" + size + "&pretty=" + pretty
+    pay_load = json.dumps(data_to_be_sent)
+    headers = {
+        "Content-Type": "application/json"
+    }
+    print('post es pay load->', pay_load)
+    try:
+        es_data = requests.post(es_url, data=pay_load, headers=headers, verify=False)
+    except requests.exceptions.RequestException as e:
+        logger.error(format_exc())
+    return Response(es_data, status=HTTP_200_OK)
+
+
+@csrf_exempt
+@api_view(["GET"])
+@permission_classes((AllowAny,))
+def get_all_records(request):
+    size = request.GET.get('size')
+    pretty = request.GET.get('pretty')
+    log_type = request.GET.get('logType')
+    url = settings.ELASTICSEARCH_HOST + ":9200/"
+    es_url = url + "logstash-" + log_type + "/_search?size=" + size + "&pretty=" + pretty
+    try:
+        es_data = requests.get(es_url, verify=False)
+    except requests.exceptions.RequestException as e:
+        logger.error(format_exc())
+    return Response(es_data, status=HTTP_200_OK)
 
 
 @csrf_exempt
